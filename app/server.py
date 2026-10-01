@@ -8,11 +8,12 @@ from __future__ import annotations
 
 import datetime as dt
 import os
+import platform
 from dataclasses import asdict
 from pathlib import Path
 
 from fastapi import FastAPI, Form, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from . import reports as report_builder
@@ -185,6 +186,119 @@ def download_report(kind: str, employee: str | None = None, department: str | No
         raise HTTPException(status_code=500, detail="report generation failed")
     media = "application/pdf" if fmt == "pdf" else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     return FileResponse(path, media_type=media, filename=Path(path).name)
+
+
+# ---------------------------------------------------------------------------
+# Deployment & Operations Center
+# ---------------------------------------------------------------------------
+
+@app.get("/deployment", response_class=HTMLResponse)
+def deployment_dashboard(request: Request):
+    sys_info = {
+        "os_platform": platform.platform(),
+        "python_version": platform.python_version(),
+        "pid": os.getpid(),
+        "host": os.getenv("HOST", "127.0.0.1"),
+        "port": os.getenv("PORT", "8000"),
+        "workers": os.getenv("WORKERS", "1"),
+        "server_time": dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    }
+
+    db_size = repo.db_path.stat().st_size if repo.db_path.exists() else 0
+    if db_size > 1024 * 1024:
+        db_size_formatted = f"{db_size / (1024 * 1024):.2f} MB"
+    else:
+        db_size_formatted = f"{db_size / 1024:.1f} KB"
+
+    with repo.connect() as conn:
+        emp_count = conn.execute("SELECT count(*) FROM employees").fetchone()[0]
+        comp_count = conn.execute("SELECT count(*) FROM competencies").fetchone()[0]
+        pos_count = conn.execute("SELECT count(*) FROM positions").fetchone()[0]
+        req_count = conn.execute("SELECT count(*) FROM position_requirements").fetchone()[0]
+        assess_count = conn.execute("SELECT count(*) FROM assessments").fetchone()[0]
+        tables_count = conn.execute("SELECT count(*) FROM sqlite_master WHERE type='table'").fetchone()[0]
+
+    db_info = {
+        "path": str(repo.db_path),
+        "filename": repo.db_path.name,
+        "size_formatted": db_size_formatted,
+        "tables_count": tables_count,
+        "employees_count": emp_count,
+        "competencies_count": comp_count,
+        "positions_count": pos_count,
+        "requirements_count": req_count,
+        "assessments_count": assess_count,
+    }
+
+    report_files = [f for f in OUTPUT_DIR.glob("*.*") if f.is_file() and not f.name.startswith(".")] if OUTPUT_DIR.exists() else []
+    reports_info = {
+        "path": str(OUTPUT_DIR),
+        "files_count": len(report_files),
+    }
+
+    message = request.query_params.get("msg")
+
+    return templates.TemplateResponse(
+        request, "deployment.html",
+        {
+            "sys_info": sys_info,
+            "db_info": db_info,
+            "reports_info": reports_info,
+            "message": message,
+        },
+    )
+
+
+@app.get("/deployment/backup/db")
+def download_database_backup():
+    if not repo.db_path.exists():
+        raise HTTPException(status_code=404, detail="Database file not found")
+    timestamp = dt.datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"tpm_matrix_backup_{timestamp}.db"
+    return FileResponse(
+        repo.db_path,
+        media_type="application/x-sqlite3",
+        filename=filename,
+    )
+
+
+@app.get("/deployment/download/mysql-script")
+def download_mysql_script():
+    mysql_file = ROOT / "sql" / "mysql_schema.sql"
+    if not mysql_file.exists():
+        try:
+            from seed.export_to_mysql import export
+            export()
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Failed to generate MySQL script: {exc}")
+    return FileResponse(
+        mysql_file,
+        media_type="application/sql",
+        filename="mysql_schema.sql",
+    )
+
+
+@app.post("/deployment/actions/reports")
+def action_regenerate_reports():
+    try:
+        report_builder.individual_competency_report(repo, "emp-101", OUTPUT_DIR)
+        report_builder.department_competency_report(repo, "Crusher Maintenance", OUTPUT_DIR)
+        report_builder.competency_gap_report(repo, OUTPUT_DIR, department="Crusher Maintenance")
+        report_builder.training_needs_report(repo, OUTPUT_DIR, department="Crusher Maintenance")
+        report_builder.competency_progress_report(repo, "emp-101", OUTPUT_DIR)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Report regeneration failed: {exc}")
+    return RedirectResponse(url="/deployment?msg=All+reports+regenerated+successfully", status_code=303)
+
+
+@app.post("/deployment/actions/migrate")
+def action_apply_migrations():
+    try:
+        from seed.migrate import main as run_migrations
+        run_migrations()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Migration failed: {exc}")
+    return RedirectResponse(url="/deployment?msg=Migrations+applied+successfully", status_code=303)
 
 
 # ---------------------------------------------------------------------------

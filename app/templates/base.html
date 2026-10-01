@@ -56,6 +56,18 @@
     .live .big { font-size:30px; font-weight:700; font-variant-numeric:tabular-nums; }
     .live .sub { font-size:12px; opacity:.85; }
     .tag { display:inline-block; background:#eef2f5; color:#40505f; padding:1px 7px; border-radius:3px; font-size:11px; font-weight:600; }
+    .tabs { display:flex; gap:6px; border-bottom:1px solid var(--line); margin-bottom:16px; overflow-x:auto; }
+    .tab-btn { background:none; border:none; padding:10px 16px; font-family:inherit; font-size:13px; font-weight:600; color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; }
+    .tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
+    .tab-pane { display:none; }
+    .tab-pane.active { display:block; }
+    .code-box { background:#1e242c; color:#f0f4f8; padding:14px; border-radius:6px; font-family:Consolas, Monaco, monospace; font-size:12.5px; position:relative; overflow-x:auto; line-height:1.5; margin:10px 0; }
+    .code-box pre { margin:0; }
+    .copy-btn { position:absolute; top:8px; right:8px; background:#364150; color:#fff; border:none; border-radius:4px; padding:4px 9px; font-size:11px; cursor:pointer; }
+    .copy-btn:hover { background:#4b5a6d; }
+    .alert { padding:12px 16px; border-radius:6px; margin-bottom:16px; font-size:13px; display:flex; align-items:center; justify-content:space-between; }
+    .alert.success { background:#e6f7ec; color:#1e7e34; border:1px solid #c3e6cb; }
+    .alert.info { background:#e8f4fd; color:#1f6feb; border:1px solid #b8daff; }
   </style>
 </head>
 <body>
@@ -64,6 +76,7 @@
   <nav>
     <a href="/" class="{% if request.url.path == '/' %}active{% endif %}">Employees</a>
     <a href="/reports" class="{% if request.url.path == '/reports' %}active{% endif %}">Reports</a>
+    <a href="/deployment" class="{% if request.url.path.startswith('/deployment') %}active{% endif %}">Deployment</a>
   </nav>
 </header>
 <main>{% block content %}{% endblock %}</main>

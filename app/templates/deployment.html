@@ -1,0 +1,357 @@
+{% extends "base.html" %}
+
+{% block title %}Deployment & Operations &middot; Hume TPM Competency Matrix{% endblock %}
+
+{% block content %}
+<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+  <div>
+    <h1 style="font-size:20px; margin:0 0 4px; color:var(--ink);">Production Deployment & Operations Center</h1>
+    <div style="color:var(--muted); font-size:13px;">Pre-flight system diagnostics, deployment playbooks, and administrative maintenance.</div>
+  </div>
+  <div style="display:flex; gap:8px;">
+    <a href="/deployment/backup/db" class="btn" style="background:#1e7e34;">&#128190; Download DB Backup</a>
+    <a href="/deployment/download/mysql-script" class="btn sec">&#128451; Export MySQL Script</a>
+  </div>
+</div>
+
+{% if message %}
+<div class="alert success">
+  <span><strong>Success:</strong> {{ message }}</span>
+  <span style="cursor:pointer;" onclick="this.parentElement.remove();">&times;</span>
+</div>
+{% endif %}
+
+<!-- System Health & Pre-flight Diagnostics -->
+<div class="card" style="margin-bottom:20px;">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+    <h2 style="margin:0; padding:0; border:none; font-size:14px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted);">
+      Pre-Flight Readiness & Diagnostics
+    </h2>
+    <span class="pill ok">&#10003; System Operational</span>
+  </div>
+
+  <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));">
+    <div style="background:#f8fafc; border:1px solid var(--line); border-radius:6px; padding:12px;">
+      <div style="font-size:11px; text-transform:uppercase; color:var(--muted); font-weight:600;">Server & Environment</div>
+      <div style="font-size:16px; font-weight:700; margin:6px 0 4px;">Python {{ sys_info.python_version }}</div>
+      <div style="font-size:12px; color:var(--ink);">OS: <strong>{{ sys_info.os_platform }}</strong></div>
+      <div style="font-size:11px; color:var(--muted); margin-top:4px;">PID: {{ sys_info.pid }} &middot; Host: {{ sys_info.host }}:{{ sys_info.port }}</div>
+    </div>
+
+    <div style="background:#f8fafc; border:1px solid var(--line); border-radius:6px; padding:12px;">
+      <div style="font-size:11px; text-transform:uppercase; color:var(--muted); font-weight:600;">Database Engine</div>
+      <div style="font-size:16px; font-weight:700; margin:6px 0 4px; display:flex; align-items:center; gap:8px;">
+        SQLite 3
+        <span class="pill ok" style="font-size:10px;">Connected</span>
+      </div>
+      <div style="font-size:12px; color:var(--ink);">Size: <strong>{{ db_info.size_formatted }}</strong> ({{ db_info.tables_count }} tables)</div>
+      <div style="font-size:11px; color:var(--muted); margin-top:4px;" title="{{ db_info.path }}">{{ db_info.filename }}</div>
+    </div>
+
+    <div style="background:#f8fafc; border:1px solid var(--line); border-radius:6px; padding:12px;">
+      <div style="font-size:11px; text-transform:uppercase; color:var(--muted); font-weight:600;">Data Records</div>
+      <div style="font-size:16px; font-weight:700; margin:6px 0 4px;">{{ db_info.employees_count }} Employees</div>
+      <div style="font-size:12px; color:var(--ink);">{{ db_info.competencies_count }} Competencies &middot; {{ db_info.requirements_count }} Requirements</div>
+      <div style="font-size:11px; color:var(--muted); margin-top:4px;">{{ db_info.assessments_count }} Assessments recorded</div>
+    </div>
+
+    <div style="background:#f8fafc; border:1px solid var(--line); border-radius:6px; padding:12px;">
+      <div style="font-size:11px; text-transform:uppercase; color:var(--muted); font-weight:600;">Storage & Reports</div>
+      <div style="font-size:16px; font-weight:700; margin:6px 0 4px; display:flex; align-items:center; gap:8px;">
+        {{ reports_info.files_count }} Reports Ready
+        <span class="pill ok" style="font-size:10px;">Writable</span>
+      </div>
+      <div style="font-size:12px; color:var(--ink);">PDF &amp; Excel engines active</div>
+      <div style="font-size:11px; color:var(--muted); margin-top:4px;">Dir: data/reports/</div>
+    </div>
+  </div>
+</div>
+
+<!-- Deployment Playbooks & Instructions -->
+<div class="card">
+  <div style="margin-bottom:12px;">
+    <h2 style="margin:0 0 4px; padding:0; border:none; font-size:16px; color:var(--ink);">Production Deployment Recipes</h2>
+    <div style="font-size:12.5px; color:var(--muted);">Select your target production environment for copy-paste instructions:</div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showTab(event, 'tab-windows')">&#128187; Windows Service (Hume Server)</button>
+    <button class="tab-btn" onclick="showTab(event, 'tab-docker')">&#128011; Docker / Container</button>
+    <button class="tab-btn" onclick="showTab(event, 'tab-linux')">&#128039; Linux VM (Nginx + Systemd)</button>
+    <button class="tab-btn" onclick="showTab(event, 'tab-env')">&#9881; Environment Configuration</button>
+  </div>
+
+  <!-- TAB 1: Windows Service -->
+  <div id="tab-windows" class="tab-pane active">
+    <div class="note" style="margin-bottom:14px;">
+      <strong>Recommended for Windows Server (Hume Cement local network):</strong> Running as a native Windows Service ensures the application automatically boots with Windows, runs silently in the background, and auto-restarts upon crashes.
+    </div>
+
+    <h3 style="font-size:14px; margin:16px 0 8px;">Method A: One-Command Service via NSSM (Non-Sucking Service Manager)</h3>
+    <p style="font-size:13px; margin:4px 0 8px; color:var(--ink);">
+      Open an elevated <strong>PowerShell (Run as Administrator)</strong> on your production Windows server and run:
+    </p>
+
+    <div class="code-box">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre># 1. Navigate to the project root
+cd C:\eflow-tpm-matrix
+
+# 2. Download NSSM if not already installed (via winget or choco)
+winget install NSSM.NSSM -e --silent
+
+# 3. Create and configure Windows Service
+nssm install EflowTpmMatrix (Get-Command python.exe).Source "run.py --host 0.0.0.0 --port 8000 --workers 4"
+nssm set EflowTpmMatrix AppDirectory "C:\eflow-tpm-matrix"
+nssm set EflowTpmMatrix DisplayName "Hume EFLOW TPM Matrix System"
+nssm set EflowTpmMatrix Description "Crusher Division Maintenance Competency Matrix Web Application"
+nssm set EflowTpmMatrix Start SERVICE_AUTO_START
+nssm set EflowTpmMatrix AppStdout "C:\eflow-tpm-matrix\data\service_out.log"
+nssm set EflowTpmMatrix AppStderr "C:\eflow-tpm-matrix\data\service_err.log"
+
+# 4. Start the service
+Start-Service EflowTpmMatrix
+
+# 5. Verify service is running
+Get-Service EflowTpmMatrix</pre>
+    </div>
+
+    <h3 style="font-size:14px; margin:20px 0 8px;">Method B: Native Windows Task Scheduler (No Extra Software Required)</h3>
+    <p style="font-size:13px; margin:4px 0 8px; color:var(--ink);">
+      If third-party tools are restricted, register an auto-start task that triggers on system startup:
+    </p>
+    <div class="code-box">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre># Run in Administrator PowerShell to create an auto-start background task:
+$Action = New-ScheduledTaskAction -Execute (Get-Command python.exe).Source -Argument "run.py --host 0.0.0.0 --port 8000 --workers 4" -WorkingDirectory "C:\eflow-tpm-matrix"
+$Trigger = New-ScheduledTaskTrigger -AtStartup
+$Principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+Register-ScheduledTask -TaskName "EflowTpmMatrix" -Action $Action -Trigger $Trigger -Principal $Principal
+
+# Start the task now
+Start-ScheduledTask -TaskName "EflowTpmMatrix"</pre>
+    </div>
+
+    <h3 style="font-size:14px; margin:20px 0 8px;">Windows Firewall Configuration</h3>
+    <p style="font-size:13px; margin:4px 0 8px; color:var(--ink);">
+      Allow other computers on the Hume local network to access the web application on port 8000:
+    </p>
+    <div class="code-box">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre>New-NetFirewallRule -DisplayName "Hume EFLOW TPM Matrix (Port 8000)" -Direction Inbound -LocalPort 8000 -Protocol TCP -Action Allow</pre>
+    </div>
+  </div>
+
+  <!-- TAB 2: Docker -->
+  <div id="tab-docker" class="tab-pane">
+    <div class="note" style="margin-bottom:14px;">
+      <strong>Docker Container Deployment:</strong> Fully self-contained container with healthcheck probe on <code>/healthz</code> and isolated dependencies.
+    </div>
+
+    <h3 style="font-size:14px; margin:16px 0 8px;">Option 1: Using Docker Compose (Single Command)</h3>
+    <div class="code-box">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre># In project directory:
+docker-compose up -d --build
+
+# View real-time container logs:
+docker-compose logs -f app
+
+# Stop the container:
+docker-compose down</pre>
+    </div>
+
+    <h3 style="font-size:14px; margin:20px 0 8px;">Option 2: Using Raw Docker CLI</h3>
+    <div class="code-box">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre># 1. Build the production image:
+docker build -t eflow-tpm-matrix:latest .
+
+# 2. Run container with data volume mount for database persistence:
+docker run -d \
+  --name eflow-tpm-matrix \
+  --restart unless-stopped \
+  -p 8000:8000 \
+  -e HOST=0.0.0.0 \
+  -e PORT=8000 \
+  -e WORKERS=4 \
+  -v tpm_matrix_data:/app/data \
+  eflow-tpm-matrix:latest
+
+# 3. Check health status:
+{% raw %}docker inspect --format='{{json .State.Health}}' eflow-tpm-matrix{% endraw %}</pre>
+    </div>
+  </div>
+
+  <!-- TAB 3: Linux VM -->
+  <div id="tab-linux" class="tab-pane">
+    <div class="note" style="margin-bottom:14px;">
+      <strong>Linux / Enterprise Cloud:</strong> Recommended architecture uses <strong>Systemd</strong> to manage Uvicorn processes and <strong>Nginx</strong> as reverse proxy with SSL termination.
+    </div>
+
+    <h3 style="font-size:14px; margin:16px 0 8px;">1. Systemd Service File: <code>/etc/systemd/system/tpm-matrix.service</code></h3>
+    <div class="code-box">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre>[Unit]
+Description=Hume EFLOW TPM Competency Matrix Service
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/eflow-tpm-matrix
+Environment="PATH=/var/www/eflow-tpm-matrix/.venv/bin:/usr/bin"
+Environment="HOST=127.0.0.1"
+Environment="PORT=8000"
+Environment="WORKERS=4"
+ExecStart=/var/www/eflow-tpm-matrix/.venv/bin/python run.py --no-reload
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target</pre>
+    </div>
+
+    <h3 style="font-size:14px; margin:20px 0 8px;">2. Nginx Reverse Proxy Config: <code>/etc/nginx/sites-available/tpm-matrix.conf</code></h3>
+    <div class="code-box">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre>server {
+    listen 80;
+    server_name tpm.humecement.com.my;
+
+    client_max_body_size 20M;
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /healthz {
+        proxy_pass http://127.0.0.1:8000/healthz;
+        access_log off;
+    }
+}</pre>
+    </div>
+  </div>
+
+  <!-- TAB 4: Environment Config -->
+  <div id="tab-env" class="tab-pane">
+    <div class="note" style="margin-bottom:14px;">
+      Environment variables can be provided via a <code>.env</code> file in the project root or passed into the container/service environment.
+    </div>
+
+    <table style="margin-top:10px;">
+      <thead>
+        <tr>
+          <th>Variable</th>
+          <th>Default</th>
+          <th>Production Recommended</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>HOST</code></td>
+          <td><code>127.0.0.1</code></td>
+          <td><code>0.0.0.0</code></td>
+          <td>IP address to bind the web server to (use 0.0.0.0 for LAN access)</td>
+        </tr>
+        <tr>
+          <td><code>PORT</code></td>
+          <td><code>8000</code></td>
+          <td><code>8000</code> or <code>80</code></td>
+          <td>HTTP listening port</td>
+        </tr>
+        <tr>
+          <td><code>WORKERS</code></td>
+          <td><code>1</code></td>
+          <td><code>4</code> (2 &times; CPU cores + 1)</td>
+          <td>Number of concurrent Uvicorn worker processes</td>
+        </tr>
+        <tr>
+          <td><code>RELOAD</code></td>
+          <td><code>false</code></td>
+          <td><code>false</code></td>
+          <td>Auto-reload on code change (must be <strong>false</strong> in production)</td>
+        </tr>
+        <tr>
+          <td><code>LOG_LEVEL</code></td>
+          <td><code>info</code></td>
+          <td><code>warning</code> or <code>info</code></td>
+          <td>Server logging verbosity</td>
+        </tr>
+        <tr>
+          <td><code>TPM_DATABASE_PATH</code></td>
+          <td><code>data/tpm_matrix.db</code></td>
+          <td><code>data/tpm_matrix.db</code></td>
+          <td>Absolute or relative path to SQLite database</td>
+        </tr>
+        <tr>
+          <td><code>TPM_REPORTS_DIR</code></td>
+          <td><code>data/reports</code></td>
+          <td><code>data/reports</code></td>
+          <td>Directory where PDF &amp; Excel reports are generated</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Maintenance & Operations Toolbar -->
+<div class="card" style="margin-top:20px;">
+  <h2 style="margin:0 0 12px; padding:0; border:none; font-size:16px; color:var(--ink);">Maintenance & Quick Operations</h2>
+  
+  <div style="display:flex; flex-wrap:wrap; gap:12px;">
+    <form action="/deployment/actions/reports" method="post" style="margin:0;">
+      <button type="submit" class="btn sec" onclick="return confirm('Regenerate all 5 PDF and Excel reports now?');">
+        &#128260; Regenerate All Reports
+      </button>
+    </form>
+
+    <form action="/deployment/actions/migrate" method="post" style="margin:0;">
+      <button type="submit" class="btn sec" onclick="return confirm('Apply any pending database migrations?');">
+        &#128736; Apply Migrations
+      </button>
+    </form>
+
+    <a href="/deployment/backup/db" class="btn sec">
+      &#128190; Save Database Snapshot
+    </a>
+
+    <a href="/docs" target="_blank" class="btn sec">
+      &#128214; Interactive API Docs (/docs)
+    </a>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showTab(event, tabId) {
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  const target = document.getElementById(tabId);
+  if (target) target.classList.add('active');
+}
+
+function copyCode(btn) {
+  const code = btn.parentElement.querySelector('pre').innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    const originalText = btn.innerText;
+    btn.innerText = 'Copied!';
+    btn.style.background = '#1e7e34';
+    setTimeout(() => {
+      btn.innerText = originalText;
+      btn.style.background = '';
+    }, 2000);
+  });
+}
+</script>
+{% endblock %}
