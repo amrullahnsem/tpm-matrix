@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Employees &middot; Hume TPM Competency{% endblock %}
+{% block content %}
+<h2>Crusher Division &mdash; Maintenance Employees</h2>
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Emp. No.</th><th>Name</th><th>Position</th><th>Department</th>
+        <th>Supervisor</th><th class="num">Exp.</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in employees %}
+      <tr>
+        <td>{{ e.employee_number }}</td>
+        <td><a href="/employee/{{ e.id }}"><strong>{{ e.full_name }}</strong></a></td>
+        <td>{{ e.position_title }}</td>
+        <td>{{ e.department }}</td>
+        <td>{{ e.supervisor or '-' }}</td>
+        <td class="num">{{ e.years_of_experience if e.years_of_experience is not none else '-' }}y</td>
+        <td>
+          <a class="btn sec" href="/employee/{{ e.id }}">Dashboard</a>
+          <a class="btn" href="/assess/{{ e.id }}">Assess</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="note">
+  Generated {{ today }}. Competency ratings are scored 0&ndash;5 against the requirement for
+  each employee's position; a competency that has never been assessed is reported as
+  <em>Not assessed</em> and is not counted as zero.
+</p>
+{% endblock %}

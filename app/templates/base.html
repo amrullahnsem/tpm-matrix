@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Hume TPM Competency Matrix{% endblock %}</title>
+  <style>
+    :root {
+      --ink:#1f2933; --muted:#6b7785; --line:#dfe3e8; --bg:#f5f7f9;
+      --brand:#1f4e79; --accent:#1f6feb;
+      --ok:#1e7e34; --warn:#b8860b; --bad:#c0392b; --none:#8a94a0;
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:"Segoe UI",Roboto,Arial,sans-serif; color:var(--ink); background:var(--bg); font-size:14px; }
+    header.top { background:var(--brand); color:#fff; padding:14px 24px; display:flex; align-items:center; gap:20px; }
+    header.top h1 { font-size:17px; margin:0; font-weight:600; }
+    header.top nav { margin-left:auto; display:flex; gap:18px; }
+    header.top a { color:#cfe2f5; text-decoration:none; font-size:13px; }
+    header.top a:hover, header.top a.active { color:#fff; text-decoration:underline; }
+    main { max-width:1180px; margin:0 auto; padding:22px 24px 60px; }
+    h2 { font-size:15px; margin:26px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+    .card { background:#fff; border:1px solid var(--line); border-radius:6px; padding:16px 18px; margin-bottom:16px; }
+    .grid { display:grid; gap:14px; }
+    .grid.two { grid-template-columns:1fr 1fr; }
+    .grid.three { grid-template-columns:repeat(3,1fr); }
+    @media (max-width:900px){ .grid.two,.grid.three { grid-template-columns:1fr; } }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th, td { text-align:left; padding:7px 9px; border-bottom:1px solid var(--line); }
+    th { background:#eef2f5; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.3px; color:#40505f; }
+    tbody tr:hover { background:#fafcfd; }
+    td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; }
+    .pill { display:inline-block; padding:2px 9px; border-radius:11px; font-size:11px; font-weight:600; white-space:nowrap; }
+    .pill.ok { background:#e4f4e8; color:var(--ok); }
+    .pill.gap { background:#fdeaea; color:var(--bad); }
+    .pill.un { background:#eef1f4; color:var(--none); }
+    .pill.crit { background:#fde8e8; color:var(--bad); }
+    .pill.high { background:#fdf1dc; color:var(--warn); }
+    .pill.med { background:#eef2f5; color:#40505f; }
+    .stat { text-align:center; padding:14px 8px; }
+    .stat .v { font-size:30px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.1; }
+    .stat .k { font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin-top:4px; }
+    .bar { height:7px; background:#e8edf1; border-radius:4px; overflow:hidden; margin-top:6px; }
+    .bar > i { display:block; height:100%; background:var(--accent); }
+    .bar > i.low { background:var(--bad); } .bar > i.mid { background:var(--warn); } .bar > i.high { background:var(--ok); }
+    .meta { display:grid; grid-template-columns:auto 1fr; gap:5px 14px; font-size:13px; }
+    .meta dt { color:var(--muted); } .meta dd { margin:0; font-weight:600; }
+    .chart { text-align:center; }
+    .chart img { max-width:100%; height:auto; }
+    .note { background:#fff8e6; border-left:3px solid var(--warn); padding:9px 12px; font-size:12.5px; border-radius:0 4px 4px 0; }
+    a { color:var(--accent); }
+    .btn { display:inline-block; background:var(--accent); color:#fff; padding:9px 16px; border-radius:5px; text-decoration:none; font-weight:600; font-size:13px; border:0; cursor:pointer; }
+    .btn.sec { background:#fff; color:var(--brand); border:1px solid var(--brand); }
+    select, input[type=text], input[type=date], textarea { font-family:inherit; font-size:13px; padding:6px 8px; border:1px solid var(--line); border-radius:4px; background:#fff; }
+    input[type=range] { width:130px; vertical-align:middle; }
+    .live { position:sticky; bottom:0; background:var(--brand); color:#fff; padding:12px 24px; display:flex; align-items:center; gap:24px; box-shadow:0 -2px 10px rgba(0,0,0,.12); }
+    .live .big { font-size:30px; font-weight:700; font-variant-numeric:tabular-nums; }
+    .live .sub { font-size:12px; opacity:.85; }
+    .tag { display:inline-block; background:#eef2f5; color:#40505f; padding:1px 7px; border-radius:3px; font-size:11px; font-weight:600; }
+  </style>
+</head>
+<body>
+<header class="top">
+  <h1>Hume &middot; TPM Maintenance Competency Matrix</h1>
+  <nav>
+    <a href="/" class="{% if request.url.path == '/' %}active{% endif %}">Employees</a>
+    <a href="/reports" class="{% if request.url.path == '/reports' %}active{% endif %}">Reports</a>
+  </nav>
+</header>
+<main>{% block content %}{% endblock %}</main>
+{% block scripts %}{% endblock %}
+</body>
+</html>

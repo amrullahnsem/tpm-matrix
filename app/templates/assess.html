@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Assess {{ employee.full_name }}{% endblock %}
+{% block content %}
+
+{% if saved %}
+<p class="note" style="background:#e9f7ed;border-left-color:#1e7e34">
+  <strong>Assessment saved.</strong> The employee's current scores and overall percentage
+  have been updated. <a href="/employee/{{ employee.id }}">View dashboard</a>
+</p>
+{% endif %}
+
+<h2>Supervisor Assessment &mdash; {{ employee.full_name }}</h2>
+<div class="card">
+  <dl class="meta" style="grid-template-columns:auto auto auto auto 1fr">
+    <dt>Position</dt><dd>{{ employee.position_title }}</dd>
+    <dt>Department</dt><dd>{{ employee.department }}</dd>
+    <dt>Supervisor</dt><dd>{{ employee.supervisor or '-' }}</dd>
+  </dl>
+</div>
+
+<form method="post" action="/assess/{{ employee.id }}" id="assess-form">
+  <div class="card">
+    <div class="grid three">
+      <label>Assessment cycle<br>
+        <select name="cycle_name" required>
+          {% for c in cycles %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Assessment date<br>
+        <input type="date" name="assessment_date" value="{{ today }}" required>
+      </label>
+      <label>Assessor<br>
+        <input type="text" name="assessor_name" value="{{ employee.supervisor or '' }}" required>
+      </label>
+    </div>
+  </div>
+
+  <h2>Competency Ratings (0&ndash;5)</h2>
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th style="width:34%">Competency</th><th>Category</th>
+            <th class="num">Required</th><th style="width:24%">Rating</th><th>Descriptor</th></tr>
+      </thead>
+      <tbody>
+        {% for score in profile.scores %}
+        <tr>
+          <td>{{ score.competency_name }}</td>
+          <td><span class="tag">{{ score.category }}</span></td>
+          <td class="num">{{ score.required_score }}</td>
+          <td>
+            <select name="rating_{{ score.competency_id }}" data-comp="{{ score.competency_id }}"
+                    data-required="{{ score.required_score }}">
+              <option value="">-- not assessed --</option>
+              {% for r in ratings %}<option value="{{ r.value }}"
+                {% if score.rating_score is not none and score.rating_score == r.value %}selected{% endif %}>{{ r.label }}</option>
+              {% endfor %}
+            </select>
+            <input type="range" min="0" max="5" step="1" class="slider"
+                   data-comp="{{ score.competency_id }}" style="display:none">
+          </td>
+          <td class="desc">&mdash;</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <label>Remarks<br>
+      <textarea name="remarks" rows="2" style="width:100%" placeholder="Observations, context for the ratings..."></textarea>
+    </label>
+  </div>
+{% block live %}{% endblock %}
+</form>
+
+<div class="live">
+  <div>
+    <div class="big" id="live-pct">&mdash;</div>
+    <div class="sub">Live overall competency</div>
+  </div>
+  <div>
+    <div class="big" id="live-score">&mdash;</div>
+    <div class="sub">Total / max possible</div>
+  </div>
+  <div>
+    <div class="big" id="live-coverage">&mdash;</div>
+    <div class="sub">Coverage (required competencies rated)</div>
+  </div>
+  <div style="margin-left:auto">
+    <button class="btn" type="submit">Submit assessment</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// The preview is computed by the server via POST /api/scoring/preview, which runs the
+// exact same scoring engine used on save. Duplicating the formula in JavaScript would
+// risk the preview disagreeing with what gets stored.
+const form = document.getElementById('assess-form');
+const LABELS = {5:'Expert',4:'Highly Competent',3:'Reasonably Competent',
+                2:'Under Training / Needs Refresher',1:'Low or Very Basic',0:'None'};
+
+let timer = null;
+function refresh() {
+  const ratings = {}, required = {};
+  document.querySelectorAll('select[data-comp]').forEach(sel => {
+    const id = sel.dataset.comp;
+    required[id] = Number(sel.dataset.required);
+    if (sel.value !== '') ratings[id] = Number(sel.value);
+    const desc = sel.closest('tr').querySelector('.desc');
+    desc.textContent = sel.value === '' ? '\u2014' : (LABELS[sel.value] || '');
+  });
+  fetch('/api/scoring/preview', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ratings, required})
+  }).then(r => r.json()).then(d => {
+    if (d.error) return;
+    document.getElementById('live-pct').textContent = d.overallPercentage.toFixed(1) + '%';
+    document.getElementById('live-score').textContent = d.totalRating + '/' + d.maxPossibleRating;
+    document.getElementById('live-coverage').textContent = d.assessedCount + '/' + (d.assessedCount + d.unassessedCount);
+  }).catch(() => {});
+}
+
+form.addEventListener('change', e => { if (e.target.matches('select[data-comp]')) refresh(); });
+refresh();
+</script>
+{% endblock %}

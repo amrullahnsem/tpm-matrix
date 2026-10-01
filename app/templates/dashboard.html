@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}{{ employee.full_name }} &middot; Competency Dashboard{% endblock %}
+{% block content %}
+
+<div class="card">
+  <div class="grid two">
+    <div>
+      <h2 style="margin-top:0">{{ employee.full_name }}</h2>
+      <dl class="meta">
+        <dt>Employee No.</dt><dd>{{ employee.employee_number }}</dd>
+        <dt>Position</dt><dd>{{ employee.position_title }}</dd>
+        <dt>Department</dt><dd>{{ employee.department }}</dd>
+        <dt>Supervisor</dt><dd>{{ employee.supervisor or '-' }}</dd>
+        <dt>Date Joined</dt><dd>{{ employee.join_date }} ({{ employee.years_of_experience }} years)</dd>
+      </dl>
+    </div>
+    <div class="grid three">
+      <div class="stat">
+        <div class="v">{{ '%.1f'|format(profile.overall.percentage) }}%</div>
+        <div class="k">Overall Competency</div>
+        <div class="bar"><i class="{{ 'low' if profile.overall.percentage < 60 else 'mid' if profile.overall.percentage < 80 else 'high' }}"
+             style="width:{{ profile.overall.percentage }}%"></i></div>
+      </div>
+      <div class="stat">
+        <div class="v">{{ profile.overall.total_rating }}/{{ profile.overall.max_possible_rating }}</div>
+        <div class="k">Total Rating</div>
+        <div class="k" style="text-transform:none;letter-spacing:0">(max possible)</div>
+      </div>
+      <div class="stat">
+        <div class="v">{{ profile.overall.assessed_count }}/{{ profile.overall.total_count }}</div>
+        <div class="k">Assessed</div>
+        <div class="bar"><i style="width:{{ profile.overall.coverage_percentage }}%"></i></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if not profile.overall.is_complete %}
+<p class="note">
+  <strong>{{ profile.overall.unassessed_count }} of {{ profile.overall.total_count }}</strong>
+  competencies have not been assessed yet, so the {{ '%.1f'|format(profile.overall.percentage) }}%
+  figure covers only what has been rated. The spider chart shows the missing axes as
+  breaks in the current polygon.
+</p>
+{% endif %}
+
+<h2>Competency Spider Chart</h2>
+<div class="card chart">
+  <img src="/employee/{{ employee.id }}/chart.svg?size=1000" alt="Competency spider chart for {{ employee.full_name }}">
+</div>
+
+<h2>Individual Competency Ratings</h2>
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Competency</th><th>Category</th>
+        <th class="num">Current</th><th class="num">Required</th>
+        <th class="num">Current %</th><th class="num">Required %</th>
+        <th>Status</th><th>Priority</th><th class="num">Shortfall</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for gap in profile.gaps %}
+      <tr>
+        <td>{{ gap.competency_name }}</td>
+        <td><span class="tag">{{ gap.category }}</span></td>
+        <td class="num">{{ 'Not assessed' if gap.rating_score is none else gap.rating_score }}</td>
+        <td class="num">{{ gap.required_score }}</td>
+        <td class="num">{{ '-' if gap.current_percentage is none else gap.current_percentage ~ '%' }}</td>
+        <td class="num">{{ gap.required_percentage }}%</td>
+        <td><span class="pill {{ 'ok' if gap.status.value == 'Achieved' else 'un' if gap.status.value == 'Unassessed' else 'gap' }}">{{ gap.status.value }}</span></td>
+        <td>{% if gap.is_actionable %}<span class="pill {{ gap.priority.value|lower }}">{{ gap.priority.value }}</span>{% else %}-{% endif %}</td>
+        <td class="num">{{ gap.shortfall if gap.is_actionable else 0 }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<h2>Identified Competency Gaps ({{ profile.action_items|length }})</h2>
+<div class="card">
+  <table>
+    <thead>
+      <tr><th>Priority</th><th>Competency</th><th>Category</th>
+          <th class="num">Required</th><th class="num">Current</th>
+          <th class="num">Gap (pts)</th><th>Recommended action</th></tr>
+    </thead>
+    <tbody>
+      {% for gap in profile.action_items %}
+      <tr>
+        <td><span class="pill {{ gap.priority.value|lower }}">{{ gap.priority.value }}</span></td>
+        <td>{{ gap.competency_name }}</td>
+        <td><span class="tag">{{ gap.category }}</span></td>
+        <td class="num">{{ gap.required_score }}</td>
+        <td class="num">{{ 'Not assessed' if gap.rating_score is none else gap.rating_score }}</td>
+        <td class="num">{{ gap.shortfall }}</td>
+        <td>
+          {% if gap.status.value == 'Unassessed' %}
+            Schedule assessment before allocating training budget
+          {% elif gap.category == 'Safety & Compliance' %}
+            Priority safety refresher &mdash; mandatory before independent work
+          {% else %}
+            Enrol in {{ gap.competency_name }} training
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7">No gaps &mdash; every required competency has been met.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="grid two">
+  <div>
+    <h2>Assessment History</h2>
+    <div class="card">
+      <table>
+        <thead><tr><th>Date</th><th>Cycle</th><th>Assessor</th><th class="num">Score</th><th class="num">Overall</th></tr></thead>
+        <tbody>
+          {% for a in profile.assessments %}
+          <tr>
+            <td>{{ a.assessment_date }}</td><td>{{ a.cycle_name }}</td>
+            <td>{{ a.assessor_name }}</td>
+            <td class="num">{{ a.total_rating }}/{{ a.max_possible_rating }}</td>
+            <td class="num">{{ '%.1f'|format(a.overall_percentage) }}%</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5">No assessments recorded.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div>
+    <h2>Training History</h2>
+    <div class="card">
+      <table>
+        <thead><tr><th>Completed</th><th>Training</th><th>Provider</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for t in profile.training %}
+          <tr><td>{{ t.completion_date }}</td><td>{{ t.title }}</td>
+              <td>{{ t.provider or '-' }}</td><td>{{ t.status }}</td></tr>
+          {% else %}
+          <tr><td colspan="4">No training recorded.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:24px">
+  <a class="btn" href="/assess/{{ employee.id }}">Record a new assessment</a>
+  <a class="btn sec" href="/reports/individual/download?employee={{ employee.id }}&fmt=pdf">Download individual report (PDF)</a>
+  <a class="btn sec" href="/reports/individual/download?employee={{ employee.id }}&fmt=xlsx">Excel</a>
+</p>
+{% endblock %}
